@@ -261,9 +261,9 @@ export default function Home() {
                     onChange={(e) => setIdCliente(e.target.value.replace(/\D/g, ""))}
                     className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition duration-200 tracking-wider"
                   />
-                  {idCliente && idCliente.length < 6 && (
-                    <span className="absolute right-3 top-3 text-[10px] text-amber-500">
-                      Faltan {6 - idCliente.length} dígitos
+                   {idCliente && idCliente.length < 6 && (
+                    <span className="absolute right-3 top-3 text-[10px] text-slate-400 italic">
+                      Se enviará como: {idCliente.padStart(6, "0")}
                     </span>
                   )}
                 </div>
@@ -517,7 +517,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={handleSubmitSales}
-                      disabled={validCount === 0 || !usuario || !clave || !idCliente || idCliente.length < 6 || isPending}
+                      disabled={validCount === 0 || !usuario || !clave || !idCliente || isPending}
                       className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed rounded-xl shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] transition flex items-center gap-2"
                     >
                       {isPending ? (
@@ -540,12 +540,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                {(!usuario || !clave || !idCliente || idCliente.length < 6) && validCount > 0 && (
+                {(!usuario || !clave || !idCliente) && validCount > 0 && (
                   <p className="text-[11px] text-amber-500 mt-2 flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Por favor complete el Usuario, Clave e IdCliente (6 dígitos) en el panel izquierdo para habilitar el envío.
+                    Por favor complete el Usuario, Clave e IdCliente en el panel izquierdo para habilitar el envío.
                   </p>
                 )}
               </div>
