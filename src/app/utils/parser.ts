@@ -243,14 +243,16 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             IdComprobante: idComprobante,
             PtoVenta: ptoVenta,
             NroComprobante: nroComprobante,
-            Detalles: [
-              {
-                DescripcionItem: "Venta",
-                Cantidad: "1",
-                ImporteNeto: importeNeto.toFixed(2),
-                ImporteImpuestos: importeImpuestos.toFixed(2),
-              },
-            ],
+           Detalles: [
+  {
+    DescripcionItem: "Venta",
+    Cantidad: "1",
+    ImporteNeto: importeNeto.toFixed(2),
+    ImporteImpuestos: importeImpuestos.toFixed(2),
+    Alicuota: typeRaw === "X" ? "0" : "21",
+    RubroVenta: "1",
+  },
+],
             Pagos: [
               {
                 MedioPago: "OTROS",
