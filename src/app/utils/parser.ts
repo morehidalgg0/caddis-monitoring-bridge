@@ -18,7 +18,7 @@ export interface MonitoringDetail {
   ImporteNeto: string;
   ImporteImpuestos: string;
   Alicuota?: string;
-  rubro?: string;
+  Rubro?: string;
 }
 
 export interface MonitoringPago {
@@ -254,7 +254,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
                 Alicuota: typeRaw === "X" ? "0" : "21",
-                rubro: String(row["rubro"] || row["Rubro"] || row["Empresa"] || "1").trim(),
+                Rubro: String(row["rubro"] || row["Rubro"] || row["Empresa"] || "1").trim(),
               },
             ],
             Pagos: [

@@ -663,7 +663,7 @@ export default function Home() {
                                           </div>
                                           <div className="flex justify-between border-b border-slate-900 py-1">
                                             <span className="text-slate-500">Rubro:</span>
-                                            <span className="font-semibold text-indigo-300">{voucher.mapped.Detalles[0].rubro}</span>
+                                            <span className="font-semibold text-indigo-300">{voucher.mapped.Detalles[0].Rubro}</span>
                                           </div>
                                           <div className="flex justify-between border-b border-slate-900 py-1">
                                             <span className="text-slate-500">Importe Neto (IVA 21%):</span>
