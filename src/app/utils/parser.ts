@@ -253,7 +253,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 Cantidad: "1",
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
-                Alicuota: typeRaw === "X" ? "0" : "21",
+                Alicuota: typeRaw === "X" ? "0.00" : "21.00",
                 Rubro: String(row["rubro"] || row["Rubro"] || row["Empresa"] || "1").trim(),
               },
             ],
