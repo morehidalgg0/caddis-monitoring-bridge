@@ -6,6 +6,8 @@ export interface CaddisRow {
   "Factura Fecha"?: any;
   "Total"?: any;
   "PDV"?: any;
+  "rubro"?: any;
+  "Rubro"?: any;
   "Empresa"?: any;
   [key: string]: any;
 }
@@ -16,7 +18,7 @@ export interface MonitoringDetail {
   ImporteNeto: string;
   ImporteImpuestos: string;
   Alicuota?: string;
-  CodigoRubro?: string;
+  rubro?: string;
 }
 
 export interface MonitoringPago {
@@ -252,7 +254,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
                 Alicuota: typeRaw === "X" ? "0" : "21",
-                rubro: "1",
+                rubro: String(row["rubro"] || row["Rubro"] || row["Empresa"] || "1").trim(),
               },
             ],
             Pagos: [

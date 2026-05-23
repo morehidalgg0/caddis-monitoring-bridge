@@ -662,6 +662,10 @@ export default function Home() {
                                             <span className="font-mono font-semibold text-slate-300">{voucher.mapped.NroComprobante}</span>
                                           </div>
                                           <div className="flex justify-between border-b border-slate-900 py-1">
+                                            <span className="text-slate-500">Rubro:</span>
+                                            <span className="font-semibold text-indigo-300">{voucher.mapped.Detalles[0].rubro}</span>
+                                          </div>
+                                          <div className="flex justify-between border-b border-slate-900 py-1">
                                             <span className="text-slate-500">Importe Neto (IVA 21%):</span>
                                             <span className="font-semibold text-slate-300">${voucher.mapped.Detalles[0].ImporteNeto}</span>
                                           </div>
@@ -726,7 +730,7 @@ export default function Home() {
                     Columnas Requeridas
                   </h4>
                   <p className="text-[11px] text-slate-500 mt-1.5">
-                    El Excel debe incluir: Factura Tipo, Factura Nro, Factura Fecha, Total. Opcionales: PDV, Empresa.
+                    El Excel debe incluir: Factura Tipo, Factura Nro, Factura Fecha, Total. Opcionales: PDV, rubro.
                   </p>
                 </div>
                 <div className="p-4 bg-slate-900/30 border border-slate-800 rounded-xl">
