@@ -187,7 +187,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-violet-400 via-indigo-200 to-cyan-400 bg-clip-text text-transparent">
-                SolutionsMalls Monitoring Bridge
+                MH Monitoring
               </h1>
               <p className="text-xs text-slate-400">Intermediario de reportes de venta: Caddis a SolutionsMalls</p>
             </div>
@@ -829,7 +829,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-4 text-center text-xs text-slate-600 bg-slate-950">
-        <p>SolutionsMalls Monitoring Bridge &copy; {new Date().getFullYear()} - Conector de Reporte de Ventas Caddis</p>
+        <p>MH Monitoring &copy; {new Date().getFullYear()} - Desarrollado por Morena Hidalgo</p>
       </footer>
     </div>
   );
