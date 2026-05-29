@@ -56,10 +56,13 @@ export const COMPROBANTE_MAP: Record<string, string> = {
   NCX: "008",  // Nota de Crédito B
   NDEB: "007", // Nota de Débito B
   X: "083",    // Ticket
+  PP: "083",   // Ticket
+  R: "083",    // Ticket
+  RC: "083",   // Ticket
 };
 
 // Types that should be ignored
-export const IGNORE_TYPES = new Set(["PP", "R", "RC"]);
+export const IGNORE_TYPES = new Set<string>();
 
 /**
  * Parses a Date value into the DD-MM-YYYY format required by SolutionsMalls.
@@ -139,7 +142,12 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
         // Validate basic headers
         const sampleRow = rows[0];
-        const requiredHeaders = ["Factura Tipo", "Factura Nro", "Factura Fecha", "Total"];
+        const isNewSchema = "Tipo" in sampleRow && "Nro" in sampleRow && "Fecha" in sampleRow;
+        
+        const requiredHeaders = isNewSchema
+          ? ["Tipo", "Nro", "Fecha", "Precio Neto"]
+          : ["Factura Tipo", "Factura Nro", "Factura Fecha", "Total"];
+          
         const missingHeaders = requiredHeaders.filter(h => !(h in sampleRow));
         
         if (missingHeaders.length > 0) {
@@ -149,10 +157,9 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
         const processed: ProcessedVoucher[] = rows.map((row, idx) => {
           const id = `row-${idx}`;
-          const typeRaw = String(row["Factura Tipo"] || "").trim().toUpperCase();
-          const invoiceNo = String(row["Factura Nro"] || "").trim();
-          const dateRaw = row["Factura Fecha"];
-          const totalRaw = row["Total"];
+          const typeRaw = String(row[isNewSchema ? "Tipo" : "Factura Tipo"] || "").trim().toUpperCase();
+          const invoiceNo = String(row[isNewSchema ? "Nro" : "Factura Nro"] || "").trim();
+          const dateRaw = row[isNewSchema ? "Fecha" : "Factura Fecha"];
 
           // 1. Check if ignored type
           if (IGNORE_TYPES.has(typeRaw)) {
@@ -164,23 +171,18 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             };
           }
 
-          // 2. Validate type
-          const idComprobante = COMPROBANTE_MAP[typeRaw];
-          if (!idComprobante) {
-            return {
-              id,
-              originalRow: row,
-              status: "invalid",
-              errorReason: `Tipo de factura '${typeRaw}' desconocido o no mapeado.`,
-            };
-          }
+          // 2. Validate type (fallback to Ticket "083" if unknown)
+          const idComprobante = COMPROBANTE_MAP[typeRaw] || "083";
 
-          // 3. Extract PtoVenta and NroComprobante from Factura Nro
+          // 3. Extract PtoVenta and NroComprobante from Factura Nro / Nro
           let ptoVenta = "";
           let nroComprobante = "";
           
-          if (invoiceNo.includes("-")) {
-            const parts = invoiceNo.split("-");
+          // Replace spaces with hyphens to support both formats (e.g. 0031 00002360)
+          const cleanInvoiceNo = invoiceNo.replace(/\s+/g, "-");
+          
+          if (cleanInvoiceNo.includes("-")) {
+            const parts = cleanInvoiceNo.split("-");
             ptoVenta = parts[0].trim().padStart(4, "0");
             nroComprobante = parts[1].trim().padStart(9, "0");
           } else if (invoiceNo) {
@@ -215,19 +217,51 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             };
           }
 
-          // 4. Parse Total and calculate Net / Tax
-          const totalNum = Number(totalRaw);
-          if (isNaN(totalNum)) {
-            return {
-              id,
-              originalRow: row,
-              status: "invalid",
-              errorReason: `Total inválido: '${totalRaw}' (debe ser numérico).`,
-            };
-          }
+          // 4. Parse amounts
+          let totalNum = 0;
+          let importeNeto = 0;
+          let importeImpuestos = 0;
 
-          const importeNeto = Number((totalNum / 1.21).toFixed(2));
-          const importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
+          if (isNewSchema) {
+            const netoRaw = Number(row["Precio Neto"]);
+            const totalRaw = Number(row["Total"]);
+            
+            if (isNaN(netoRaw)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Precio Neto inválido: '${row["Precio Neto"]}' (debe ser numérico).`,
+              };
+            }
+            
+            // "el monto que va es el precio neto"
+            totalNum = netoRaw;
+            importeNeto = netoRaw;
+            
+            // Calculate taxes based on the difference, only if it's not type X
+            if (typeRaw === "X") {
+              importeImpuestos = 0.00;
+            } else {
+              const fullTotal = isNaN(totalRaw) ? totalNum : totalRaw;
+              importeImpuestos = Number((fullTotal - netoRaw).toFixed(2));
+              if (importeImpuestos < 0) importeImpuestos = 0;
+            }
+          } else {
+            const totalRaw = Number(row["Total"]);
+            if (isNaN(totalRaw)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
+              };
+            }
+
+            totalNum = totalRaw;
+            importeNeto = Number((totalNum / 1.21).toFixed(2));
+            importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
+          }
 
           // 5. Parse Date
           const formattedDate = formatToMonitoringDate(dateRaw);
