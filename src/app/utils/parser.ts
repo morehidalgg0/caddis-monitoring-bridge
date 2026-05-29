@@ -157,6 +157,12 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
         const processed: ProcessedVoucher[] = rows.map((row, idx) => {
           const id = `row-${idx}`;
+          
+          // Si es el nuevo esquema, sobreescribimos Total con Precio Neto para la UI y la sumatoria
+          if (isNewSchema && "Precio Neto" in row) {
+            row["Total"] = row["Precio Neto"];
+          }
+
           const typeRaw = String(row[isNewSchema ? "Tipo" : "Factura Tipo"] || "").trim().toUpperCase();
           const invoiceNo = String(row[isNewSchema ? "Nro" : "Factura Nro"] || "").trim();
           const dateRaw = row[isNewSchema ? "Fecha" : "Factura Fecha"];
@@ -218,38 +224,23 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           }
 
           // 4. Parse amounts
-          let totalNum = 0;
+          const totalNum = Number(row["Total"]);
+          if (isNaN(totalNum)) {
+            return {
+              id,
+              originalRow: row,
+              status: "invalid",
+              errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
+            };
+          }
+
           let importeNeto = 0;
           let importeImpuestos = 0;
 
           if (isNewSchema) {
-            const netoRaw = Number(row["Precio Neto"]);
-            
-            if (isNaN(netoRaw)) {
-              return {
-                id,
-                originalRow: row,
-                status: "invalid",
-                errorReason: `Precio Neto inválido: '${row["Precio Neto"]}' (debe ser numérico).`,
-              };
-            }
-            
-            // "el monto que va es el precio neto"
-            totalNum = netoRaw;
-            importeNeto = netoRaw;
+            importeNeto = totalNum;
             importeImpuestos = 0.00;
           } else {
-            const totalRaw = Number(row["Total"]);
-            if (isNaN(totalRaw)) {
-              return {
-                id,
-                originalRow: row,
-                status: "invalid",
-                errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
-              };
-            }
-
-            totalNum = totalRaw;
             importeNeto = Number((totalNum / 1.21).toFixed(2));
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
           }
