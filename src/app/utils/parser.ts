@@ -224,7 +224,6 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
           if (isNewSchema) {
             const netoRaw = Number(row["Precio Neto"]);
-            const totalRaw = Number(row["Total"]);
             
             if (isNaN(netoRaw)) {
               return {
@@ -238,15 +237,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             // "el monto que va es el precio neto"
             totalNum = netoRaw;
             importeNeto = netoRaw;
-            
-            // Calculate taxes based on the difference, only if it's not type X
-            if (typeRaw === "X") {
-              importeImpuestos = 0.00;
-            } else {
-              const fullTotal = isNaN(totalRaw) ? totalNum : totalRaw;
-              importeImpuestos = Number((fullTotal - netoRaw).toFixed(2));
-              if (importeImpuestos < 0) importeImpuestos = 0;
-            }
+            importeImpuestos = 0.00;
           } else {
             const totalRaw = Number(row["Total"]);
             if (isNaN(totalRaw)) {
@@ -287,7 +278,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 Cantidad: "1",
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
-                Alicuota: typeRaw === "X" ? "0.00" : "21.00",
+                Alicuota: isNewSchema ? "0.00" : (typeRaw === "X" ? "0.00" : "21.00"),
                 Rubro: "1",
               },
             ],
