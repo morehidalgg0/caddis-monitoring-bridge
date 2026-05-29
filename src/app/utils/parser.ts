@@ -167,6 +167,11 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           const invoiceNo = String(row[isNewSchema ? "Nro" : "Factura Nro"] || "").trim();
           const dateRaw = row[isNewSchema ? "Fecha" : "Factura Fecha"];
 
+          // Normalizar las propiedades de row para que la UI siempre las encuentre con sus nombres estándar
+          row["Factura Tipo"] = typeRaw;
+          row["Factura Nro"] = invoiceNo;
+          row["Factura Fecha"] = dateRaw;
+
           // 1. Check if ignored type
           if (IGNORE_TYPES.has(typeRaw)) {
             return {
