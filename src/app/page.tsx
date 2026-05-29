@@ -40,7 +40,7 @@ export default function Home() {
 
   const totalAmount = vouchers
     .filter((v) => v.status === "valid")
-    .reduce((sum, v) => sum + Number(v.originalRow["Total"] || 0), 0);
+    .reduce((sum, v) => sum + Number(v.originalRow["Total"] || v.originalRow["Precio Neto"] || 0), 0);
 
   // Handle Drag Events
   const handleDrag = (e: React.DragEvent) => {
@@ -599,16 +599,16 @@ export default function Home() {
                                 )}
                               </td>
                               <td className="py-3.5 px-4 font-semibold text-slate-300">
-                                {voucher.originalRow["Factura Tipo"] || "N/A"}
+                                {voucher.originalRow["Factura Tipo"] || voucher.originalRow["Tipo"] || "N/A"}
                               </td>
                               <td className="py-3.5 px-4 font-mono text-slate-300">
-                                {voucher.originalRow["Factura Nro"] || "N/A"}
+                                {voucher.originalRow["Factura Nro"] || voucher.originalRow["Nro"] || "N/A"}
                               </td>
                               <td className="py-3.5 px-4 text-slate-400">
-                                {voucher.mapped?.Fecha || formatToMonitoringDate(voucher.originalRow["Factura Fecha"])}
+                                {voucher.mapped?.Fecha || formatToMonitoringDate(voucher.originalRow["Factura Fecha"] || voucher.originalRow["Fecha"])}
                               </td>
                               <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
-                                ${Number(voucher.originalRow["Total"] || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                ${Number(voucher.originalRow["Total"] || voucher.originalRow["Precio Neto"] || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                               </td>
                               <td className="py-3.5 px-4 text-center">
                                 <button
@@ -650,7 +650,7 @@ export default function Home() {
                                           <div className="flex justify-between border-b border-slate-900 py-1">
                                             <span className="text-slate-500">IdComprobante:</span>
                                             <span className="font-semibold text-slate-300">
-                                              {voucher.mapped.IdComprobante} ({COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"]).toUpperCase()] === "001" ? "Factura A" : COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"]).toUpperCase()] === "006" ? "Factura B" : "Otro"})
+                                              {voucher.mapped.IdComprobante} ({COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"] || voucher.originalRow["Tipo"] || "").toUpperCase()] === "001" ? "Factura A" : COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"] || voucher.originalRow["Tipo"] || "").toUpperCase()] === "006" ? "Factura B" : "Otro"})
                                             </span>
                                           </div>
                                           <div className="flex justify-between border-b border-slate-900 py-1">
