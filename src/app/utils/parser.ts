@@ -157,11 +157,6 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
         const processed: ProcessedVoucher[] = rows.map((row, idx) => {
           const id = `row-${idx}`;
-          
-          // Si es el nuevo esquema, sobreescribimos Total con Precio Neto para la UI y la sumatoria
-          if (isNewSchema && "Precio Neto" in row) {
-            row["Total"] = row["Precio Neto"];
-          }
 
           const typeRaw = String(row[isNewSchema ? "Tipo" : "Factura Tipo"] || "").trim().toUpperCase();
           const invoiceNo = String(row[isNewSchema ? "Nro" : "Factura Nro"] || "").trim();
@@ -182,25 +177,55 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             };
           }
 
+          // Helper to normalize strings (remove accents/diacritics)
+          const normalizeText = (text: string) => 
+            text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+
+          const cleanTypeRaw = normalizeText(typeRaw);
+
           // 2. Validate type (fallback to Ticket "083" if unknown)
-          const idComprobante = COMPROBANTE_MAP[typeRaw] || "083";
+          let idComprobante = "083";
+          const matchedKey = Object.keys(COMPROBANTE_MAP).find(key => {
+            const cleanKey = normalizeText(key);
+            return (
+              cleanTypeRaw === cleanKey || 
+              cleanTypeRaw.startsWith(cleanKey + " ") || 
+              cleanTypeRaw.startsWith(cleanKey + "(") ||
+              cleanTypeRaw.startsWith(cleanKey + "-")
+            );
+          });
+          if (matchedKey) {
+            idComprobante = COMPROBANTE_MAP[matchedKey];
+          }
 
           // 3. Extract PtoVenta and NroComprobante from Factura Nro / Nro
           let ptoVenta = "";
           let nroComprobante = "";
           
           // Replace spaces with hyphens to support both formats (e.g. 0031 00002360)
-          const cleanInvoiceNo = invoiceNo.replace(/\s+/g, "-");
+          const cleanInvoiceNo = invoiceNo.replace(/\s+/g, "-").trim();
           
           if (cleanInvoiceNo.includes("-")) {
             const parts = cleanInvoiceNo.split("-");
             ptoVenta = parts[0].trim().padStart(4, "0");
             nroComprobante = parts[1].trim().padStart(9, "0");
+          } else if (/^\d+$/.test(cleanInvoiceNo)) {
+            // Reconstruct format from a pure numeric representation (e.g. "3100002774")
+            const padded = cleanInvoiceNo.padStart(13, "0");
+            ptoVenta = padded.slice(0, 4);
+            nroComprobante = padded.slice(4);
           } else if (invoiceNo) {
             // Fallback: If no hyphen, look for "PDV" column
             const pdvRaw = String(row["PDV"] || "").trim();
-            ptoVenta = pdvRaw ? pdvRaw.padStart(4, "0") : "0001";
-            nroComprobante = invoiceNo.padStart(9, "0");
+            if (pdvRaw) {
+              ptoVenta = pdvRaw.padStart(4, "0");
+              nroComprobante = invoiceNo.padStart(9, "0");
+            } else {
+              // No PDV column, use first 4 characters as PtoVenta, rest as NroComprobante
+              const padded = invoiceNo.trim().padStart(13, "0");
+              ptoVenta = padded.slice(0, 4);
+              nroComprobante = padded.slice(4);
+            }
           } else {
             return {
               id,
@@ -229,23 +254,51 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           }
 
           // 4. Parse amounts
-          const totalNum = Number(row["Total"]);
-          if (isNaN(totalNum)) {
-            return {
-              id,
-              originalRow: row,
-              status: "invalid",
-              errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
-            };
-          }
-
+          let totalNum = 0;
           let importeNeto = 0;
           let importeImpuestos = 0;
 
           if (isNewSchema) {
-            importeNeto = totalNum;
-            importeImpuestos = 0.00;
+            totalNum = Number(row["Total"]);
+            importeNeto = Number(row["Precio Neto"]);
+            importeImpuestos = Number(row["Impuestos"] || 0);
+
+            if (isNaN(totalNum)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
+              };
+            }
+            if (isNaN(importeNeto)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Precio Neto inválido: '${row["Precio Neto"]}' (debe ser numérico).`,
+              };
+            }
+            if (isNaN(importeImpuestos)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Impuestos inválido: '${row["Impuestos"]}' (debe ser numérico).`,
+              };
+            }
           } else {
+            const totalRaw = Number(row["Total"]);
+            if (isNaN(totalRaw)) {
+              return {
+                id,
+                originalRow: row,
+                status: "invalid",
+                errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
+              };
+            }
+
+            totalNum = totalRaw;
             importeNeto = Number((totalNum / 1.21).toFixed(2));
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
           }
