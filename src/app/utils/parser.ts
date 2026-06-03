@@ -59,17 +59,6 @@ export const COMPROBANTE_MAP: Record<string, string> = {
   PP: "083",   // Ticket
   R: "083",    // Ticket
   RC: "083",   // Ticket
-  
-  // Robust mappings for descriptions
-  "BOLETA ELECTRONICA": "006",
-  "BOLETA ELECTRÓNICA": "006",
-  "TICKET": "083",
-  "NOTA DE CREDITO B": "008",
-  "NOTA DE CRÉDITO B": "008",
-  "NOTA DE CREDITO X": "008",
-  "NOTA DE CRÉDITO X": "008",
-  "NOTA DE CREDITO A": "003",
-  "NOTA DE CRÉDITO A": "003",
 };
 
 // Types that should be ignored
@@ -193,26 +182,8 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             };
           }
 
-          // Helper to normalize strings (remove accents/diacritics)
-          const normalizeText = (text: string) => 
-            text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
-
-          const cleanTypeRaw = normalizeText(typeRaw);
-
           // 2. Validate type (fallback to Ticket "083" if unknown)
-          let idComprobante = "083";
-          const matchedKey = Object.keys(COMPROBANTE_MAP).find(key => {
-            const cleanKey = normalizeText(key);
-            return (
-              cleanTypeRaw === cleanKey || 
-              cleanTypeRaw.startsWith(cleanKey + " ") || 
-              cleanTypeRaw.startsWith(cleanKey + "(") ||
-              cleanTypeRaw.startsWith(cleanKey + "-")
-            );
-          });
-          if (matchedKey) {
-            idComprobante = COMPROBANTE_MAP[matchedKey];
-          }
+          const idComprobante = COMPROBANTE_MAP[typeRaw] || "083";
 
           // 3. Extract PtoVenta and NroComprobante from Factura Nro / Nro
           let ptoVenta = "";
