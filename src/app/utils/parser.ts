@@ -158,6 +158,11 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
         const processed: ProcessedVoucher[] = rows.map((row, idx) => {
           const id = `row-${idx}`;
 
+          // Si es el nuevo esquema, sobreescribimos Total con Precio Neto para la UI y la sumatoria
+          if (isNewSchema && "Precio Neto" in row) {
+            row["Total"] = row["Precio Neto"];
+          }
+
           const typeRaw = String(row[isNewSchema ? "Tipo" : "Factura Tipo"] || "").trim().toUpperCase();
           const invoiceNo = String(row[isNewSchema ? "Nro" : "Factura Nro"] || "").trim();
           const dateRaw = row[isNewSchema ? "Fecha" : "Factura Fecha"];
@@ -260,17 +265,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
           if (isNewSchema) {
             totalNum = Number(row["Total"]);
-            const netRaw = Number(row["Precio Neto"]);
-
             if (isNaN(totalNum)) {
-              return {
-                id,
-                originalRow: row,
-                status: "invalid",
-                errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
-              };
-            }
-            if (isNaN(netRaw)) {
               return {
                 id,
                 originalRow: row,
@@ -279,13 +274,8 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               };
             }
 
-            if (idComprobante === "083") {
-              importeNeto = totalNum;
-              importeImpuestos = 0;
-            } else {
-              importeNeto = netRaw;
-              importeImpuestos = Number((totalNum - netRaw).toFixed(2));
-            }
+            importeNeto = totalNum;
+            importeImpuestos = 0.00;
           } else {
             const totalRaw = Number(row["Total"]);
             if (isNaN(totalRaw)) {
@@ -326,7 +316,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 Cantidad: "1",
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
-                Alicuota: idComprobante === "083" ? "0.00" : "21.00",
+                Alicuota: isNewSchema ? "0.00" : (idComprobante === "083" ? "0.00" : "21.00"),
                 Rubro: "1",
               },
             ],
