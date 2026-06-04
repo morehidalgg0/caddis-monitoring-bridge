@@ -260,8 +260,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
           if (isNewSchema) {
             totalNum = Number(row["Total"]);
-            importeNeto = Number(row["Precio Neto"]);
-            importeImpuestos = Number(row["Impuestos"] || 0);
+            const netRaw = Number(row["Precio Neto"]);
 
             if (isNaN(totalNum)) {
               return {
@@ -271,7 +270,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 errorReason: `Total inválido: '${row["Total"]}' (debe ser numérico).`,
               };
             }
-            if (isNaN(importeNeto)) {
+            if (isNaN(netRaw)) {
               return {
                 id,
                 originalRow: row,
@@ -279,13 +278,13 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 errorReason: `Precio Neto inválido: '${row["Precio Neto"]}' (debe ser numérico).`,
               };
             }
-            if (isNaN(importeImpuestos)) {
-              return {
-                id,
-                originalRow: row,
-                status: "invalid",
-                errorReason: `Impuestos inválido: '${row["Impuestos"]}' (debe ser numérico).`,
-              };
+
+            if (idComprobante === "083") {
+              importeNeto = totalNum;
+              importeImpuestos = 0;
+            } else {
+              importeNeto = netRaw;
+              importeImpuestos = Number((totalNum - netRaw).toFixed(2));
             }
           } else {
             const totalRaw = Number(row["Total"]);
@@ -327,7 +326,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 Cantidad: "1",
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
-                Alicuota: isNewSchema ? "0.00" : (typeRaw === "X" ? "0.00" : "21.00"),
+                Alicuota: idComprobante === "083" ? "0.00" : "21.00",
                 Rubro: "1",
               },
             ],
