@@ -39,8 +39,8 @@ export default function Home() {
   const invalidCount = vouchers.filter((v) => v.status === "invalid").length;
 
   const totalAmount = vouchers
-    .filter((v) => v.status === "valid")
-    .reduce((sum, v) => sum + Number(v.originalRow["Total"] || v.originalRow["Precio Neto"] || 0), 0);
+    .filter((v) => v.status === "valid" && v.mapped)
+    .reduce((sum, v) => sum + Number(v.mapped?.Pagos[0]?.Importe || 0), 0);
 
   // Handle Drag Events
   const handleDrag = (e: React.DragEvent) => {
@@ -608,7 +608,7 @@ export default function Home() {
                                 {voucher.mapped?.Fecha || formatToMonitoringDate(voucher.originalRow["Factura Fecha"] || voucher.originalRow["Fecha"])}
                               </td>
                               <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
-                                ${Number(voucher.originalRow["Total"] || voucher.originalRow["Precio Neto"] || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                ${Number(voucher.mapped?.Pagos[0]?.Importe ?? voucher.originalRow["Total"] ?? voucher.originalRow["Precio Neto"] ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                               </td>
                               <td className="py-3.5 px-4 text-center">
                                 <button
