@@ -40,7 +40,11 @@ export default function Home() {
 
   const totalAmount = vouchers
     .filter((v) => v.status === "valid" && v.mapped)
-    .reduce((sum, v) => sum + Number(v.mapped?.Pagos[0]?.Importe || 0), 0);
+    .reduce((sum, v) => {
+      const isCredit = v.mapped?.IdComprobante === "03" || v.mapped?.IdComprobante === "08";
+      const val = Number(v.mapped?.Pagos[0]?.Importe || 0);
+      return sum + (isCredit ? -val : val);
+    }, 0);
 
   // Handle Drag Events
   const handleDrag = (e: React.DragEvent) => {
@@ -608,6 +612,7 @@ export default function Home() {
                                 {voucher.mapped?.Fecha || formatToMonitoringDate(voucher.originalRow["Factura Fecha"] || voucher.originalRow["Fecha"])}
                               </td>
                               <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                                {voucher.mapped?.IdComprobante === "03" || voucher.mapped?.IdComprobante === "08" ? "-" : ""}
                                 ${Number(voucher.mapped?.Pagos[0]?.Importe ?? voucher.originalRow["Total"] ?? voucher.originalRow["Precio Neto"] ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                               </td>
                               <td className="py-3.5 px-4 text-center">
@@ -650,7 +655,7 @@ export default function Home() {
                                           <div className="flex justify-between border-b border-slate-900 py-1">
                                             <span className="text-slate-500">IdComprobante:</span>
                                             <span className="font-semibold text-slate-300">
-                                              {voucher.mapped.IdComprobante} ({COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"] || voucher.originalRow["Tipo"] || "").toUpperCase()] === "001" ? "Factura A" : COMPROBANTE_MAP[String(voucher.originalRow["Factura Tipo"] || voucher.originalRow["Tipo"] || "").toUpperCase()] === "006" ? "Factura B" : "Otro"})
+                                              {voucher.mapped.IdComprobante} ({voucher.mapped.IdComprobante === "01" ? "Factura A" : voucher.mapped.IdComprobante === "06" ? "Factura B" : voucher.mapped.IdComprobante === "03" ? "Nota de Crédito A" : voucher.mapped.IdComprobante === "08" ? "Nota de Crédito B" : "Otro"})
                                             </span>
                                           </div>
                                           <div className="flex justify-between border-b border-slate-900 py-1">

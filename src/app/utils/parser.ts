@@ -46,19 +46,19 @@ export interface ProcessedVoucher {
 
 // Map Caddis invoice type to SolutionsMalls IdComprobante
 export const COMPROBANTE_MAP: Record<string, string> = {
-  EA: "001",   // Factura A
-  IA: "001",   // Factura A
-  EB: "006",   // Factura B
-  TK: "006",   // Factura B
-  NCEA: "003", // Nota de Crédito A
-  NCEB: "008", // Nota de Crédito B
-  NCIB: "008", // Nota de Crédito B
-  NCX: "008",  // Nota de Crédito B
-  NDEB: "007", // Nota de Débito B
-  X: "083",    // Ticket
-  PP: "083",   // Ticket
-  R: "083",    // Ticket
-  RC: "083",   // Ticket
+  EA: "01",   // Factura A
+  IA: "01",   // Factura A
+  EB: "06",   // Factura B
+  TK: "06",   // Factura B
+  NCEA: "03", // Nota de Crédito A
+  NCEB: "08", // Nota de Crédito B
+  NCIB: "08", // Nota de Crédito B
+  NCX: "08",  // Nota de Crédito B
+  NDEB: "07", // Nota de Débito B
+  X: "83",    // Ticket
+  PP: "83",   // Ticket
+  R: "83",    // Ticket
+  RC: "83",   // Ticket
 };
 
 // Types that should be ignored
@@ -213,10 +213,10 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           if (cleanInvoiceNo.includes("-")) {
             const parts = cleanInvoiceNo.split("-");
             ptoVenta = parts[0].trim().padStart(4, "0");
-            nroComprobante = parts[1].trim().padStart(9, "0");
+            nroComprobante = parts[1].trim().padStart(8, "0");
           } else if (/^\d+$/.test(cleanInvoiceNo)) {
             // Reconstruct format from a pure numeric representation (e.g. "3100002774")
-            const padded = cleanInvoiceNo.padStart(13, "0");
+            const padded = cleanInvoiceNo.padStart(12, "0");
             ptoVenta = padded.slice(0, 4);
             nroComprobante = padded.slice(4);
           } else if (invoiceNo) {
@@ -224,10 +224,10 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             const pdvRaw = String(row["PDV"] || "").trim();
             if (pdvRaw) {
               ptoVenta = pdvRaw.padStart(4, "0");
-              nroComprobante = invoiceNo.padStart(9, "0");
+              nroComprobante = invoiceNo.padStart(8, "0");
             } else {
               // No PDV column, use first 4 characters as PtoVenta, rest as NroComprobante
-              const padded = invoiceNo.trim().padStart(13, "0");
+              const padded = invoiceNo.trim().padStart(12, "0");
               ptoVenta = padded.slice(0, 4);
               nroComprobante = padded.slice(4);
             }
@@ -249,12 +249,12 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               errorReason: `Punto de venta inválido: '${ptoVenta}' (debe ser numérico de hasta 4 dígitos).`,
             };
           }
-          if (nroComprobante.length > 9 || isNaN(Number(nroComprobante))) {
+          if (nroComprobante.length > 8 || isNaN(Number(nroComprobante))) {
             return {
               id,
               originalRow: row,
               status: "invalid",
-              errorReason: `Número de comprobante inválido: '${nroComprobante}' (debe ser numérico de hasta 9 dígitos).`,
+              errorReason: `Número de comprobante inválido: '${nroComprobante}' (debe ser numérico de hasta 8 dígitos).`,
             };
           }
 
@@ -290,14 +290,6 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             totalNum = totalRaw;
             importeNeto = Number((totalNum / 1.21).toFixed(2));
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
-          }
-
-          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste
-          const isCreditNote = idComprobante === "003" || idComprobante === "008";
-          if (isCreditNote) {
-            totalNum = -Math.abs(totalNum);
-            importeNeto = -Math.abs(importeNeto);
-            importeImpuestos = -Math.abs(importeImpuestos);
           }
 
           // 5. Parse Date
