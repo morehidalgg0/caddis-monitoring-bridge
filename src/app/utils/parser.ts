@@ -260,6 +260,8 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           let importeNeto = 0;
           let importeImpuestos = 0;
 
+          const isCreditNote = idComprobante === "03" || idComprobante === "08";
+
           if (isNewSchema) {
             const netRaw = Number(row["Precio Neto"] || 0);
             const impuestosRaw = Number(row["Impuestos"] || 0);
@@ -280,20 +282,21 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               if (cleanKey.includes("iibb") || cleanKey.includes("ingresos brutos") || cleanKey.includes("percepcion") || cleanKey.includes("retencion")) {
                 const val = Number(row[key]);
                 if (!isNaN(val)) {
-                  iibbVal += val;
+                  // Si es Nota de Crédito, la retención de IIBB se suma como positivo
+                  iibbVal += isCreditNote ? Math.abs(val) : val;
                 }
               }
             }
 
             if (idComprobante === "01" || idComprobante === "03") { // Factura A o Nota de Crédito A
-              importeNeto = netRaw;
-              importeImpuestos = Number((impuestosRaw + iibbVal).toFixed(2));
-              totalNum = Number((netRaw + importeImpuestos).toFixed(2));
+              importeNeto = isCreditNote ? Math.abs(netRaw) : netRaw;
+              importeImpuestos = Number(((isCreditNote ? Math.abs(impuestosRaw) : impuestosRaw) + iibbVal).toFixed(2));
+              totalNum = Number((importeNeto + importeImpuestos).toFixed(2));
             } else {
               // Para otros comprobantes (Factura B, Ticket, etc.), el total es el Precio Neto y no lleva impuestos
-              importeNeto = netRaw;
+              importeNeto = isCreditNote ? Math.abs(netRaw) : netRaw;
               importeImpuestos = 0.00;
-              totalNum = netRaw;
+              totalNum = importeNeto;
             }
           } else {
             const totalRaw = Number(row["Total"]);
@@ -306,18 +309,9 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               };
             }
 
-            totalNum = totalRaw;
+            totalNum = isCreditNote ? Math.abs(totalRaw) : totalRaw;
             importeNeto = Number((totalNum / 1.21).toFixed(2));
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
-          }
-
-          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste.
-          // Agregamos una guarda para solo negar si el valor es positivo, evitando doble negación.
-          const isCreditNote = idComprobante === "03" || idComprobante === "08";
-          if (isCreditNote) {
-            totalNum = totalNum > 0 ? -totalNum : totalNum;
-            importeNeto = importeNeto > 0 ? -importeNeto : importeNeto;
-            importeImpuestos = importeImpuestos > 0 ? -importeImpuestos : importeImpuestos;
           }
 
           // 5. Parse Date
