@@ -40,7 +40,11 @@ export default function Home() {
 
   const totalAmount = vouchers
     .filter((v) => v.status === "valid" && v.mapped)
-    .reduce((sum, v) => sum + Number(v.mapped?.Pagos[0]?.Importe || 0), 0);
+    .reduce((sum, v) => {
+      const isCredit = v.mapped?.IdComprobante === "03" || v.mapped?.IdComprobante === "08";
+      const val = Number(v.mapped?.Pagos[0]?.Importe || 0);
+      return sum + (isCredit ? -val : val);
+    }, 0);
 
   // Handle Drag Events
   const handleDrag = (e: React.DragEvent) => {
@@ -608,6 +612,7 @@ export default function Home() {
                                 {voucher.mapped?.Fecha || formatToMonitoringDate(voucher.originalRow["Factura Fecha"] || voucher.originalRow["Fecha"])}
                               </td>
                               <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                                {voucher.mapped?.IdComprobante === "03" || voucher.mapped?.IdComprobante === "08" ? "-" : ""}
                                 ${Number(voucher.mapped?.Pagos[0]?.Importe ?? voucher.originalRow["Total"] ?? voucher.originalRow["Precio Neto"] ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                               </td>
                               <td className="py-3.5 px-4 text-center">

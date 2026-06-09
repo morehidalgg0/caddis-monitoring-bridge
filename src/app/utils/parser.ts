@@ -264,8 +264,10 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           let importeImpuestos = 0;
 
           if (isNewSchema) {
-            totalNum = Number(row["Total"]);
-            if (isNaN(totalNum)) {
+            const netRaw = Number(row["Precio Neto"] || 0);
+            const impuestosRaw = Number(row["Impuestos"] || 0);
+
+            if (isNaN(netRaw)) {
               return {
                 id,
                 originalRow: row,
@@ -274,8 +276,28 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               };
             }
 
-            importeNeto = totalNum;
-            importeImpuestos = 0.00;
+            // Buscar dinámicamente si hay alguna columna de IIBB, percepciones o retenciones
+            let iibbVal = 0;
+            for (const key of Object.keys(row)) {
+              const cleanKey = key.toLowerCase();
+              if (cleanKey.includes("iibb") || cleanKey.includes("ingresos brutos") || cleanKey.includes("percepcion") || cleanKey.includes("retencion")) {
+                const val = Number(row[key]);
+                if (!isNaN(val)) {
+                  iibbVal += val;
+                }
+              }
+            }
+
+            if (idComprobante === "01" || idComprobante === "03") { // Factura A o Nota de Crédito A
+              importeNeto = netRaw;
+              importeImpuestos = Number((impuestosRaw + iibbVal).toFixed(2));
+              totalNum = Number((netRaw + importeImpuestos).toFixed(2));
+            } else {
+              // Para otros comprobantes (Factura B, Ticket, etc.), el total es el Precio Neto y no lleva impuestos
+              importeNeto = netRaw;
+              importeImpuestos = 0.00;
+              totalNum = netRaw;
+            }
           } else {
             const totalRaw = Number(row["Total"]);
             if (isNaN(totalRaw)) {
@@ -290,14 +312,6 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             totalNum = totalRaw;
             importeNeto = Number((totalNum / 1.21).toFixed(2));
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
-          }
-
-          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste
-          const isCreditNote = idComprobante === "03" || idComprobante === "08";
-          if (isCreditNote) {
-            totalNum = -Math.abs(totalNum);
-            importeNeto = -Math.abs(importeNeto);
-            importeImpuestos = -Math.abs(importeImpuestos);
           }
 
           // 5. Parse Date
