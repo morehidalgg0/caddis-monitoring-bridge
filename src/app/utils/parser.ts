@@ -314,6 +314,14 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
           }
 
+          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste
+          const isCreditNote = idComprobante === "03" || idComprobante === "08";
+          if (isCreditNote) {
+            totalNum = -Math.abs(totalNum);
+            importeNeto = -Math.abs(importeNeto);
+            importeImpuestos = -Math.abs(importeImpuestos);
+          }
+
           // 5. Parse Date
           const formattedDate = formatToMonitoringDate(dateRaw);
           if (!formattedDate) {
