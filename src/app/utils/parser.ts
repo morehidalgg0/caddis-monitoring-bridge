@@ -56,13 +56,10 @@ export const COMPROBANTE_MAP: Record<string, string> = {
   NCX: "08",  // Nota de Crédito B
   NDEB: "07", // Nota de Débito B
   X: "83",    // Ticket
-  PP: "83",   // Ticket
-  R: "83",    // Ticket
-  RC: "83",   // Ticket
 };
 
 // Types that should be ignored
-export const IGNORE_TYPES = new Set<string>();
+export const IGNORE_TYPES = new Set<string>(["PP", "R", "RC"]);
 
 /**
  * Parses a Date value into the DD-MM-YYYY format required by SolutionsMalls.
@@ -188,8 +185,8 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
 
           const cleanTypeRaw = normalizeText(typeRaw);
 
-          // 2. Validate type (fallback to Ticket "083" if unknown)
-          let idComprobante = "083";
+          // 2. Validate type (fallback to Ticket "83" if unknown)
+          let idComprobante = "83";
           const matchedKey = Object.keys(COMPROBANTE_MAP).find(key => {
             const cleanKey = normalizeText(key);
             return (
@@ -213,10 +210,10 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
           if (cleanInvoiceNo.includes("-")) {
             const parts = cleanInvoiceNo.split("-");
             ptoVenta = parts[0].trim().padStart(4, "0");
-            nroComprobante = parts[1].trim().padStart(8, "0");
+            nroComprobante = parts[1].trim().padStart(9, "0");
           } else if (/^\d+$/.test(cleanInvoiceNo)) {
             // Reconstruct format from a pure numeric representation (e.g. "3100002774")
-            const padded = cleanInvoiceNo.padStart(12, "0");
+            const padded = cleanInvoiceNo.padStart(13, "0");
             ptoVenta = padded.slice(0, 4);
             nroComprobante = padded.slice(4);
           } else if (invoiceNo) {
@@ -224,10 +221,10 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             const pdvRaw = String(row["PDV"] || "").trim();
             if (pdvRaw) {
               ptoVenta = pdvRaw.padStart(4, "0");
-              nroComprobante = invoiceNo.padStart(8, "0");
+              nroComprobante = invoiceNo.padStart(9, "0");
             } else {
               // No PDV column, use first 4 characters as PtoVenta, rest as NroComprobante
-              const padded = invoiceNo.trim().padStart(12, "0");
+              const padded = invoiceNo.trim().padStart(13, "0");
               ptoVenta = padded.slice(0, 4);
               nroComprobante = padded.slice(4);
             }
@@ -249,12 +246,12 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
               errorReason: `Punto de venta inválido: '${ptoVenta}' (debe ser numérico de hasta 4 dígitos).`,
             };
           }
-          if (nroComprobante.length > 8 || isNaN(Number(nroComprobante))) {
+          if (nroComprobante.length > 9 || isNaN(Number(nroComprobante))) {
             return {
               id,
               originalRow: row,
               status: "invalid",
-              errorReason: `Número de comprobante inválido: '${nroComprobante}' (debe ser numérico de hasta 8 dígitos).`,
+              errorReason: `Número de comprobante inválido: '${nroComprobante}' (debe ser numérico de hasta 9 dígitos).`,
             };
           }
 
@@ -314,12 +311,13 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
             importeImpuestos = Number((totalNum - importeNeto).toFixed(2));
           }
 
-          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste
+          // Si es nota de crédito, convertimos los montos a negativo para que la API los reste.
+          // Agregamos una guarda para solo negar si el valor es positivo, evitando doble negación.
           const isCreditNote = idComprobante === "03" || idComprobante === "08";
           if (isCreditNote) {
-            totalNum = -Math.abs(totalNum);
-            importeNeto = -Math.abs(importeNeto);
-            importeImpuestos = -Math.abs(importeImpuestos);
+            totalNum = totalNum > 0 ? -totalNum : totalNum;
+            importeNeto = importeNeto > 0 ? -importeNeto : importeNeto;
+            importeImpuestos = importeImpuestos > 0 ? -importeImpuestos : importeImpuestos;
           }
 
           // 5. Parse Date
@@ -346,7 +344,7 @@ export async function parseCaddisExcel(file: File): Promise<ProcessedVoucher[]> 
                 Cantidad: "1",
                 ImporteNeto: importeNeto.toFixed(2),
                 ImporteImpuestos: importeImpuestos.toFixed(2),
-                Alicuota: isNewSchema ? "0.00" : (idComprobante === "083" ? "0.00" : "21.00"),
+                Alicuota: isNewSchema ? "0.00" : (idComprobante === "83" ? "0.00" : "21.00"),
                 Rubro: "1",
               },
             ],
